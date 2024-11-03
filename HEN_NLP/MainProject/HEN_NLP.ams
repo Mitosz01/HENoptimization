@@ -1,0 +1,302 @@
+## ams_version=1.0
+
+Model Main_HEN_NLP {
+	Set HS {
+		Index: i;
+	}
+	Set HP {
+		SubsetOf: HS;
+	}
+	Set HU {
+		SubsetOf: HS;
+	}
+	Set CS {
+		Index: j;
+	}
+	Set CPr {
+		SubsetOf: CS;
+	}
+	Set CU {
+		SubsetOf: CS;
+	}
+	Set STEPS {
+		Index: k;
+		Definition: ElementRange(1, NumberOfStages+1);
+	}
+	Parameter TINi {
+		IndexDomain: i;
+	}
+	Parameter TINj {
+		IndexDomain: j;
+	}
+	Parameter TOUTi {
+		IndexDomain: i;
+	}
+	Parameter TOUTj {
+		IndexDomain: j;
+	}
+	Parameter Fi {
+		IndexDomain: i in HP;
+	}
+	Parameter Fj {
+		IndexDomain: j in CPr;
+	}
+	Parameter U {
+		IndexDomain: (i,j);
+	}
+	Parameter C {
+		IndexDomain: (i,j);
+	}
+	Parameter B {
+		IndexDomain: (i,j);
+	}
+	Parameter CCU {
+		Definition: 20;
+	}
+	Parameter CHU {
+		Definition: 80;
+	}
+	Parameter CF {
+		Definition: 0;
+	}
+	Parameter NumberOfStages {
+		Definition: 8;
+	}
+	Parameter e {
+		Definition: 10e-4;
+	}
+	Parameter m {
+		Definition: 10e-6;
+	}
+	Variable q {
+		IndexDomain: (i in HP,j in CPr,k in STEPS);
+		Range: nonnegative;
+	}
+	Variable qcoldU {
+		IndexDomain: i in HP;
+		Range: nonnegative;
+	}
+	Parameter QCU {
+		Definition: 230;
+	}
+	Constraint sumqcoldU {
+		Definition: sum(i in HP, qcoldU(i)) = QCU;
+	}
+	Variable qhotU {
+		IndexDomain: j in CPr;
+		Range: nonnegative;
+	}
+	Parameter QHU {
+		Definition: 620;
+	}
+	Constraint sumqhotU {
+		Definition: sum(j in CPr, qhotU(j)) = QHU;
+	}
+	Variable th {
+		IndexDomain: (i in HP,k in STEPS);
+		Range: nonnegative;
+	}
+	Variable tc {
+		IndexDomain: (j in CPr,k in STEPS);
+		Range: nonnegative;
+	}
+	Constraint th_in {
+		IndexDomain: (i in HP, k ) | ord(k) = 1;
+		Definition: TINi(i) = th(i,k);
+	}
+	Constraint tc_in {
+		IndexDomain: (j in CPr, k) | ord(k) = NumberOfStages + 1;
+		Definition: TINj(j) = tc(j, k);
+	}
+	Constraint th_out {
+		IndexDomain: (i in HP, k) | ord(k) = NumberOfStages + 1;
+		Definition: th(i,k) >= TOUTi(i);
+	}
+	Constraint tc_out {
+		IndexDomain: (j in CPr, k) | ord(k) = 1;
+		Definition: tc(j,k) <= TOUTj(j);
+	}
+	Constraint th_order {
+		IndexDomain: (i in HP, k in STEPS);
+		Definition: th(i,k) >= th(i,k+1);
+	}
+	Constraint tc_order {
+		IndexDomain: (j in CPr, k in STEPS);
+		Definition: tc(j,k) >= tc(j,k+1);
+	}
+	Constraint HBSTAGESi {
+		IndexDomain: (i in HP, k in STEPS) | ord(k) <= NumberofStages;
+		Text: "Heat balance for each stage Hot";
+		Definition: Fi(i) * (th(i,k) - th(i, k+1)) = sum(j in CPr, q(i,j,k));
+	}
+	Constraint HBSTAGESj {
+		IndexDomain: (j in CPr, k in STEPS) | ord(k) <= NumberofStages;
+		Text: "Heat Balance for Stages cold";
+		Definition: Fj(j) * (tc(j,k) - tc(j,k+1)) = sum(i in HP, q(i,j,k));
+	}
+	Constraint qcoldUvalue {
+		IndexDomain: (i in HP, k) | ord(k) = NumberOfStages + 1;
+		Definition: qcoldU(i) = Fi(i) * (th(i, k) - TOUTi(i));
+	}
+	Constraint qhotUvalue {
+		IndexDomain: (j in CPr, k) | ord(k) = 1;
+		Definition: qhotU(j) = Fj(j) * (TOUTj(j) - tc(j,k));
+	}
+	Constraint THBi {
+		IndexDomain: i in HP;
+		Text: "Total Heat Balance for Hot";
+		Definition: Fi(i) * (TINi(i) - TOUTi(i)) = sum( (j in CPr,k in STEPS), q(i,j,k)) + qcoldU(i);
+	}
+	Constraint THBj {
+		IndexDomain: j in CPr;
+		Text: "Total Heat Balance for Cold";
+		Definition: Fj(j) * (TOUTj(j) - TINj(j)) = sum( (i in HP,k in STEPS), q(i,j,k) ) + qhotU(j);
+	}
+	Variable TotalUtilityUsage {
+		Range: free;
+		Definition: sum(i in HP, qcoldU(i)) + sum(j in CPr, qhotU(j));
+	}
+	MathematicalProgram minUtilityUsage {
+		Objective: TotalUtilityUsage;
+		Direction: minimize;
+		Constraints: AllConstraints;
+		Variables: AllVariables;
+		Type: Automatic;
+	}
+	Variable LMTD {
+		IndexDomain: (i in HP, j in CPr, k) | ord(k) <= NumberOfStages;
+		Range: [m, inf);
+		Definition: {
+			(max(0, th(i,k) - tc(j,k)) * max(0, th(i,k+1) - tc(j,k+1)) * (max(0, th(i,k) - tc(j,k)) + max(0, th(i,k+1) - tc(j,k+1)))*0.5)^(0.33333) + m;
+		}
+	}
+	Variable LMTDcu {
+		IndexDomain: (i in HP, j in CU, k) | ord(k) = NumberOfStages + 1;
+		Range: [m, inf);
+		Definition: {
+			(max(0, th(i,k) - TOUTj(j)) * max(0, TOUTi(i) - TINj(j)) * (max(0, th(i,k) - TOUTj(j))+ max(0, TOUTi(i) - TINj(j))) * 0.5)^(0.33333) + m ;
+		}
+	}
+	Variable LMTDhu {
+		IndexDomain: (i in HU, j in CPr, k) | ord(k) = 1;
+		Range: [m, inf);
+		Definition: {
+			(max(0, TOUTi(i) - tc(j,k)) * max(0, TINi(i) - TOUTj(j)) * (max(0, TOUTi(i) - tc(j,k)) + max(0, TINi(i) - TOUTj(j)))*0.5)^(0.33333) + m ;
+		}
+	}
+	Variable OverallCostTartgeting {
+		Range: free;
+		Definition: {
+			!CCU*sum(i in HP, qcoldU(i)) + CHU * sum(j in CPr, qhotU(j)) + 
+				!sum((i in HP, j in CPr, k) | ord(k) <= NumberOfStages , C(i,j) * (q(i,j,k)/(U(i,j)*LMTD(i,j,k)))^B(i,j)) +
+				!sum((i in HP, j in CU , k) | ord(k) = NumberOfStages + 1 , C(i,j) * (qcoldU(i)/(U(i,j)*LMTDcu(i,j,k)))^B(i,j)) +
+				!sum((i in HU, j in CPr, k) | ord(k) = 1 , C(i,j) * (qhotU(j)/(U(i,j)*LMTDhu(i,j,k)))^B(i,j)) ;
+				0
+		}
+	}
+	MathematicalProgram minCost {
+		Objective: OverallCostTartgeting;
+		Direction: minimize;
+		Constraints: AllConstraints;
+		Variables: AllVariables;
+		Type: Automatic;
+	}
+	Variable AreaTargeting {
+		Range: free;
+		Definition: {
+			sum((i in HP, j in CPr, k) | ord(k) <= NumberOfStages , (q(i,j,k)/(U(i,j)*LMTD(i,j,k)))) +
+			sum((i in HP, j in CU , k) | ord(k) = NumberOfStages + 1 , (qcoldU(i)/(U(i,j)*LMTDcu(i,j,k)))) +
+			sum((i in HU, j in CPr, k) | ord(k) = 1 , (qhotU(j)/(U(i,j)*LMTDhu(i,j,k)))) ;
+		}
+	}
+	MathematicalProgram minArea {
+		Objective: AreaTargeting;
+		Direction: minimize;
+		Constraints: AllConstraints;
+		Variables: AllVariables;
+		Type: NLP;
+	}
+	Procedure MainInitialization {
+		Comment: "Add initialization statements here that do NOT require any library being initialized already.";
+	}
+	Procedure PostMainInitialization {
+		Body: {
+			
+			!The starting points,
+			q(i,j,k).Level := MIN(Fi(i) * (TINi(i) - TOUTi(i)) , Fj(j) * (TOUTj(j) - TINj(j)))/NumberOfStages ;
+			!qcoldU(i).Level := Fi(i) * (TINi(i) - TOUTi(i)) ; !Az appendix szerint nem ez mutatja meg a legnagyobb esélyt a globális minimuma 
+			!qhotU(j).Level := Fj(j) * (TOUTj(j) - TINj(j)) ; 
+			th(i,k).Level := TINi(i);
+			tc(j,k).Level := TINj(j);
+			
+			!The bounds to the variables
+			qcoldU(i).Upper := Fi(i) * (TINi(i) - TOUTi(i)) ;
+			qcoldU(i).Lower := 0 ;
+			qhotU(j).Upper := Fj(j) * (TOUTj(j) - TINj(j)) ;
+			qhotU(j).Lower := 0 ; 
+			
+			q(i,j,k).Lower := 0 ;
+			q(i,j,k).Upper := MIN(Fi(i) * (TINi(i) - TOUTi(i)) , Fj(j) * (TOUTj(j) - TINj(j)));
+			
+			th(i,k).Upper := TINi(i);
+			th(i,k).Lower := TOUTi(i);
+			tc(j,k).Upper := TOUTj(j);
+			tc(j,k).Lower := TINj(j);
+			
+			!LMTD(i,j,k).Lower := 0 ; 
+			!LMTD(i,j,k).Upper := ( (TINi(i) - TOUTj(j)) * (TINi(i) - TOUTj(j)) * ((TINi(i) - TOUTj(j)) + (TINi(i) - TOUTj(j)))*0.5 )^(1/3) + m ; 
+			
+			!LMTDcu(i,j,k).Lower := 0 ;
+			
+			
+			!LMTDhu(i,j,k).Lower := 0 ;
+		}
+		Comment: {
+			"Add initialization statements here that require that the libraries are already initialized properly,
+			or add statements that require the Data Management module to be initialized."
+		}
+	}
+	Procedure MainExecution {
+		Body: {
+			solve minArea ;
+		}
+	}
+	Procedure PreMainTermination {
+		Body: {
+			return DataManagementExit();
+		}
+		Comment: {
+			"Add termination statements here that require all libraries to be still alive.
+			Return 1 if you allow the termination sequence to continue.
+			Return 0 if you want to cancel the termination sequence."
+		}
+	}
+	Procedure MainTermination {
+		Body: {
+			return 1;
+		}
+		Comment: {
+			"Add termination statements here that do not require all libraries to be still alive.
+			Return 1 to allow the termination sequence to continue.
+			Return 0 if you want to cancel the termination sequence.
+			It is recommended to only use the procedure PreMainTermination to cancel the termination sequence and let this procedure always return 1."
+		}
+	}
+	Section Quantities_and_Units {
+		Comment: {
+			"This section contains all the units and quantities that are added automatically by AIMMS.
+			It is recommended to declare all your quantities here."
+		}
+		Quantity SI_Time_Duration {
+			BaseUnit: s;
+			Conversions: minute->s : #-># * 60;
+			Comment: {
+				"Expresses the value for the duration of periods.
+				
+				The unit s has been added automatically because it is a required unit for AimmsWebUI.
+				
+				The unit minute has been added automatically because it is a required unit for AimmsWebUI."
+			}
+		}
+	}
+}

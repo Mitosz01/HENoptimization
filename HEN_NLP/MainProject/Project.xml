@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<Project AimmsVersion="24.5.8.5 unicode x64" ProjectUUID="CB8ED156-774B-4DEF-B4A0-F9D8DA334D82">
+	<ModelFileName>HEN_NLP.ams</ModelFileName>
+	<AutoSaveAndBackup>
+		<DataBackup AtRegularInterval="true" EveryNMinutes="15" NumBackupsDatedToday="3" NumDaysBeforeToday="3" />
+	</AutoSaveAndBackup>
+</Project>
