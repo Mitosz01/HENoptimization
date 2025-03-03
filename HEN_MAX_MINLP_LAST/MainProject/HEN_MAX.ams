@@ -1,0 +1,423 @@
+## ams_version=1.0
+
+Model Main_HEN_MAX {
+	Set HS {
+		Index: i;
+	}
+	Set HP {
+		SubsetOf: HS;
+	}
+	Set HU {
+		SubsetOf: HS;
+	}
+	Set CS {
+		Index: j;
+	}
+	Set CPr {
+		SubsetOf: CS;
+	}
+	Set CU {
+		SubsetOf: CS;
+	}
+	Set STEPS {
+		Index: k;
+		Definition: ElementRange(1, NumberOfStages + 1);
+	}
+	Parameter TINi {
+		IndexDomain: i;
+		Definition: {
+			
+			! °C a mértékegység most ebben a példában, de egyébként, ha negatív hőmérséklettel dolgozunk (ami lehetséges egyes anyagoknál/oldatoknál) akkor szigorúan Kelvinnek kell lennie a mértékegységnek
+		}
+	}
+	Parameter TINj {
+		IndexDomain: j;
+		Definition: {
+			
+			! °C a mértékegység most ebben a példában, de egyébként, ha negatív hőmérséklettel dolgozunk (ami lehetséges egyes anyagoknál/oldatoknál) akkor szigorúan Kelvinnek kell lennie a mértékegységnek
+		}
+	}
+	Parameter TOUTi {
+		IndexDomain: i;
+		Definition: {
+			
+			! °C a mértékegység most ebben a példában, de egyébként, ha negatív hőmérséklettel dolgozunk (ami lehetséges egyes anyagoknál/oldatoknál) akkor szigorúan Kelvinnek kell lennie a mértékegységnek
+		}
+	}
+	Parameter TOUTj {
+		IndexDomain: j;
+		Definition: {
+			
+			! °C a mértékegység most ebben a példában, de egyébként, ha negatív hőmérséklettel dolgozunk (ami lehetséges egyes anyagoknál/oldatoknál) akkor szigorúan Kelvinnek kell lennie a mértékegységnek
+		}
+	}
+	Parameter Fi {
+		IndexDomain: i;
+		Definition: {
+			!kW/°C = kJ/(s°C)
+		}
+	}
+	Parameter Fj {
+		IndexDomain: j;
+		Definition: {
+			!kW/°C = kJ/(s°C)
+		}
+	}
+	Parameter ki {
+		IndexDomain: i;
+	}
+	Parameter kj {
+		IndexDomain: j;
+	}
+	Parameter U {
+		IndexDomain: (i,j);
+		Definition: 1/((ki(i)^-1)+(kj(j)^-1));
+	}
+	Parameter CCU {
+		Definition: {
+			15 !$/(kW*year)
+			!Cost of Cold Utility
+		}
+	}
+	Parameter CHU {
+		Definition: {
+			100 !$/(kW*year)
+			!Cost of Hot Utility
+		}
+	}
+	Parameter CF {
+		IndexDomain: (i,j);
+	}
+	Parameter C {
+		IndexDomain: (i,j);
+	}
+	Parameter B {
+		IndexDomain: (i,j);
+	}
+	Parameter NumberOfStages {
+		Definition: 6;
+	}
+	Parameter MaxHeatTransfer {
+		IndexDomain: (i in HP, j in CPr);
+		Definition: MIN( (TINi(i) - TOUTi(i)) * Fi(i) , (TOUTj(j) - TINj(j)) * Fj(j));
+	}
+	Parameter MaxQCU {
+		IndexDomain: i in HP;
+		Definition: (TINi(i) - TOUTi(i)) * Fi(i);
+	}
+	Parameter MaxQHU {
+		IndexDomain: j in CPr;
+		Definition: (TOUTj(j) - TINj(j)) * Fj(j);
+	}
+	Parameter MaxTempDifference {
+		IndexDomain: (i, j);
+		Definition: MAX( TINi(i) - TINj(j) , TOUTj(j) - TOUTi(i) );
+	}
+	Variable dt {
+		IndexDomain: (i in HP,j in CPr,k);
+		Range: [MAT, inf);
+	}
+	Parameter MAT {
+		Definition: 0.1;
+	}
+	Variable dtcu {
+		IndexDomain: i in HP;
+		Range: nonnegative;
+	}
+	Variable dthu {
+		IndexDomain: j in CPr;
+		Range: nonnegative;
+	}
+	Variable q {
+		IndexDomain: (i in HP,j in CPr,k) | ord(k) <= NumberOfStages;
+		Range: nonnegative;
+	}
+	Variable qcu {
+		IndexDomain: i in HP;
+		Range: nonnegative;
+	}
+	Variable qhu {
+		IndexDomain: j in CPr;
+		Range: nonnegative;
+	}
+	Variable th {
+		IndexDomain: (i in HP,k);
+		Range: nonnegative;
+	}
+	Variable tc {
+		IndexDomain: (j in CPr,k);
+		Range: nonnegative;
+	}
+	Variable z {
+		IndexDomain: (i in HP,j in CPr,k) | ord(k) <= NumberOfStages;
+		Range: binary;
+	}
+	Variable zcu {
+		IndexDomain: i in HP;
+		Range: binary;
+	}
+	Variable zhu {
+		IndexDomain: j in CPr;
+		Range: binary;
+	}
+	Constraint th_in {
+		IndexDomain: (i in HP, k) | ord(k) = 1;
+		Definition: TINi(i) = th(i,k);
+	}
+	Constraint tc_in {
+		IndexDomain: (j in CPR, k) | ord(k) = NumberOfStages + 1;
+		Definition: TINj(j) = tc(j,k);
+	}
+	Constraint th_order {
+		IndexDomain: ( i in HP, k) | ord(k) <= NumberOfStages;
+		Definition: th(i,k) >= th(i,k+1);
+	}
+	Constraint tc_order {
+		IndexDomain: (j in CPr,k) | ord(k) <= NumberOfStages;
+		Definition: tc(j,k) >= tc(j,k+1);
+	}
+	Constraint th_out {
+		IndexDomain: (i in HP,k) | ord(k) = NumberOfStages + 1;
+		Definition: th(i,k) >= TOUTi(i);
+	}
+	Constraint tc_out {
+		IndexDomain: (j in CPr,k) | ord(k) = 1;
+		Definition: tc(j,k) <= TOUTj(j);
+	}
+	Constraint qhotUvalue {
+		IndexDomain: (j in CPr, k) | ord(k) = 1;
+		Definition: qhu(j) = (TOUTj(j) - tc(j,k)) * Fj(j);
+	}
+	Constraint qcoldUvalue {
+		IndexDomain: (i in HP, k) | ord(k) = NumberOfStages + 1;
+		Definition: qcu(i) = (th(i,k) - TOUTi(i)) * Fi(i);
+	}
+	Constraint HBSTAGESi {
+		IndexDomain: (i in HP, k) | ord(k) <= NumberOfStages;
+		Definition: (th(i,k) - th(i,k+1)) * Fi(i) = sum((j in CPr), q(i,j,k) );
+	}
+	Constraint HBSTAGESj {
+		IndexDomain: (j in CPR,k) | ord(k) <= NumberOfStages;
+		Definition: (tc(j,k) - tc(j,k+1)) * Fj(j) = sum(i in HP, q(i,j,k));
+	}
+	Constraint THBi {
+		IndexDomain: i in HP;
+		Definition: (TINi(i) - TOUTi(i)) * Fi(i) = sum((j in CPr, k) | ord(k) <= NumberOfStages , q(i,j,k)) + qcu(i);
+	}
+	Constraint THBj {
+		IndexDomain: j in CPr;
+		Definition: (TOUTj(j) - TINj(j)) * Fj(j) = sum((i in HP, k) | ord(k) <= NumberOfStages, q(i,j,k)) + qhu(j);
+	}
+	Constraint LqValue {
+		IndexDomain: (i in HP, j in CPr, k) | ord(k) <= NumberOfStages;
+		Definition: q(i,j,k) - MaxHeatTransfer(i,j) * z(i,j,k) <= 0;
+	}
+	Constraint LqcuValue {
+		IndexDomain: i in HP;
+		Definition: qcu(i) - MaxQCU(i) * zcu(i) <= 0;
+	}
+	Constraint LqhuValue {
+		IndexDomain: j in CPr;
+		Definition: qhu(j) - MaxQHU(j) * zhu(j) <= 0;
+	}
+	Constraint Ldt {
+		IndexDomain: (i in HP, j in CPr, k);
+		Definition: dt(i,j,k) <= th(i,k) - tc(j,k) + MaxTempDifference(i,j) * (1 - z(i,j,k));
+	}
+	Constraint Ldt1 {
+		IndexDomain: (i in HP, j in CPr, k) | ord(k) <= NumberOfStages;
+		Definition: dt(i,j,k+1) <= th(i,k+1) - tc(j,k+1) + MaxTempDifference(i,j) * (1 - z(i,j,k));
+	}
+	Constraint Ldtcu {
+		IndexDomain: (i in HP, j in CU, k) | ord(k) = NumberOfStages + 1;
+		Definition: dtcu(i) <= th(i,k) - TOUTj(j) + MaxTempDifference(i,j)* ( 1 - zcu(i));
+	}
+	Constraint Ldthu {
+		IndexDomain: (i in HU, j in CPr, k) | ord(k) = 1;
+		Definition: dthu(j) <= (TOUTi(i) - tc(j,k)) + MaxTempDifference(i,j) * (1- zhu(j));
+	}
+	Variable TotalCost {
+		Range: free;
+		Definition: {
+			sum(i in HP, qcu(i) * CCU) + sum(j in CPr, qhu(j) * CHU) +
+			sum((i in HP, j in CPr, k) | ord(k) <= NumberOfStages, CF(i,j) * z(i,j,k)) + 
+			sum((i in HP, j in CU), CF(i,j) * zcu(i)) + sum((i in HU, j in CPr), CF(i,j) * zhu(j)) + 
+			sum((i in HP, j in CPr, k) | ord(k) <= NumberOfStages	, C(i,j) * (q(i,j,k)/(U(i,j) * (dt(i,j,k) * dt(i,j,k+1) * (dt(i,j,k) + dt(i,j,k+1)) * 0.5 )^(0.33333)))	^(B(i,j))) + 
+			sum((i in HP, j in CU), 				  C(i,j) * (qcu(i) / (U(i,j) * ( dtcu(i) * (TOUTi(i) - TINj(j)) * ( dtcu(i) + (TOUTi(i) - TINj(j))) * 0.5)^(0.33333))) 	^(B(i,j))) +
+			sum((i in HU, j in CPr), 				  C(i,j) * (qhu(j) / (U(i,j) * ( dthu(j) * ( TINi(i) - TOUTj(j)) * (dthu(j) + ( TINi(i) - TOUTj(j))) * 0.5 )^(0.33333)))	^(B(i,j)));
+		}
+	}
+	MathematicalProgram minCost {
+		Objective: TotalCost;
+		Direction: minimize;
+		Constraints: AllConstraints;
+		Variables: AllVariables;
+		Type: Automatic;
+	}
+	Constraint NoSplitting_i {
+		IndexDomain: (j in CPr, k) | ord(k) <= NumberOfStages;
+		Definition: sum(i in HP, z(i,j,k)) <= 1;
+	}
+	Constraint NoSplitting_j {
+		IndexDomain: (i in HP, k) | ord(k) <= NumberOfStages;
+		Definition: sum(j in CPr, z(i,j,k)) <= 1;
+	}
+	Procedure MainInitialization {
+		Body: {
+			!Kezdőértékek teljes külső munkával (no stream splitting, első példa megoldása)
+			
+			!Hőcsere mennyiségek
+				q(i,j,k).Level := 0;
+			
+				!q('H1','C2','1').Level := (443-363)*30;
+				!q('H1','C1','2').Level:= (363-333)*30;
+				!q('H2','C1','1').Level := (423-363)*15;
+				!q('H2','C1','3').Level := (363-343)*15;
+			
+				qcu(i).Level := Fi(i) * (TINi(i) - TOUTi(i)) ;
+			
+				!qcu('H2').Level := (343-303)*15;
+				!qcu('H1').Level := 0;
+			
+				qhu(j).Level := Fj(j) * (TOUTj(j) - TINj(j)) ;
+			
+				!qhu('C1').Level := (408-398)*20;
+				!qhu('C2').Level := 0 ;
+			
+			!Hőmérésklet(ek) és különbségek
+			
+				th(i,k).Level := TINi(i) ;
+			
+				!th('H1','2') := 363;
+				!th('H1','3') := 333;
+				!th('H2','2') := 363;
+				!th('H2','3') := 343;
+			
+				tc(j,k).Level := TINj(j) ;
+			
+				!tc('C1','2') := 308;
+				!tc('C1','1') := 398;
+				!tc('C2','1') := 413;
+			
+				dt(i,j,k).Level := MAX( th(i,k) - tc(j,k), MAT);
+				dtcu(i).Level := th(i,'3')- TOUTj('CU');		!Ezt mindig át kell majd írni 
+				dthu(j).Level := TOUTi('HU') - tc(j,'1');
+			
+			
+			!Hőcserélő egységek
+				z(i,j,k).Level := 0;
+			
+				!z('H1','C2','1').Level := 1;
+				!z('H1','C1','2').Level := 1;
+				!z('H2','C1','1').Level := 1;
+				!z('H2','C1','3').Level := 1;
+			
+				zcu(i).Level := 1 ;
+			
+				!zcu('H1').Level := 0;
+			
+				zhu(j).Level := 1 ;
+			
+				!zhu('C2').Level := 0;
+			
+			!Hajtóerők
+				!LMTD(i,j,k).Level := (dt(i,j,k) * dt(i,j,k+1) * (dt(i,j,k) + dt(i,j,k+1)) * 0.5 )^(0.33333) ;
+			
+			
+			
+			
+				!LMTDcu(i,j).Level := ( dtcu(i) * (TOUTi(i) - TINj(j)) * ( dtcu(i) + (TOUTi(i) - TINj(j))) * 0.5)^(0.33333);
+			
+			
+			
+			
+				!LMTDhu(i,j).Level := ( dthu(j) * ( TINi(i) - TOUTj(j)) * (dthu(j) + ( TINi(i) - TOUTj(j))) * 0.5 )^(0.33333);
+			
+			
+			
+			
+			
+			
+			
+			!Határok
+			
+			!Hőmérésklet(ek) / különbségek
+				th(i,k).Lower := 0;
+				th(i,k).Upper := TINi(i);
+				tc(j,k).Lower := 0;
+				tc(j,k).Upper := TOUTj(j);
+				dt(i,j,k).Upper := MAX(TINi(i) - TINj(j) , TOUTj(j) - TOUTi(i));
+				!dt(i,j,k).Lower := MAT ; Sikít ha alkalmazni akarom, ki van már fejezve magánál a változónál
+				dtcu(i).Lower := MAT ;
+				dtcu(i).Upper := TINi(i) - TOUTj('CU');
+				dthu(j).Lower := MAT ;
+				dthu(j).Upper := TOUTi('HU') - TINj(j);
+			
+			!Hajtóerők
+				!LMTD(i,j,k).Lower := MAT ; 
+				!LMTD(i,j,k).Upper := MAX(TINi(i) - TINj(j) , TOUTj(j) - TOUTi(i));
+				!LMTDcu(i,j).Lower := MAT ;
+				!LMTDcu(i,j).Upper := (  (TINi(i) - TOUTcu) * (TOUTi(i) - TINj(j)) * ( (TINi(i) - TOUTcu) + (TOUTi(i) - TINj(j))) * 0.5)^(0.33333) ;
+				!LMTDhu(i,j).Lower := MAT ;
+				!LMTDhu(i,j).Upper := (  (TOUThu - TINj(j)) * ( TINi(i) - TOUTj(j)) * ( (TOUThu - TINj(j)) + ( TINi(i) - TOUTj(j))) * 0.5 )^(0.33333);
+			
+			!Hőcsere mennyiségek
+				q(i,j,k).Lower := 0;
+				q(i,j,k).Upper := MIN(Fi(i) * (TINi(i) - TOUTi(i)) , Fj(j) * (TOUTj(j) - TINj(j))) ;
+				qcu(i).Lower := 0;
+				qcu(i).Upper := Fi(i) * (TINi(i) - TOUTi(i)) ;
+				qhu(j).Lower := 0;
+				qhu(j).Upper := Fj(j) * (TOUTj(j) - TINj(j)) ;
+		}
+		Comment: "Add initialization statements here that do NOT require any library being initialized already.";
+	}
+	Procedure PostMainInitialization {
+		Comment: {
+			"Add initialization statements here that require that the libraries are already initialized properly,
+			or add statements that require the Data Management module to be initialized."
+		}
+	}
+	Procedure MainExecution {
+		Body: {
+			solve minCost ;
+		}
+	}
+	Procedure PreMainTermination {
+		Body: {
+			return DataManagementExit();
+		}
+		Comment: {
+			"Add termination statements here that require all libraries to be still alive.
+			Return 1 if you allow the termination sequence to continue.
+			Return 0 if you want to cancel the termination sequence."
+		}
+	}
+	Procedure MainTermination {
+		Body: {
+			return 1;
+		}
+		Comment: {
+			"Add termination statements here that do not require all libraries to be still alive.
+			Return 1 to allow the termination sequence to continue.
+			Return 0 if you want to cancel the termination sequence.
+			It is recommended to only use the procedure PreMainTermination to cancel the termination sequence and let this procedure always return 1."
+		}
+	}
+	Section Quantities_and_Units {
+		Comment: {
+			"This section contains all the units and quantities that are added automatically by AIMMS.
+			It is recommended to declare all your quantities here."
+		}
+		Quantity SI_Time_Duration {
+			BaseUnit: s;
+			Conversions: minute->s : #-># * 60;
+			Comment: {
+				"Expresses the value for the duration of periods.
+				
+				The unit s has been added automatically because it is a required unit for AimmsWebUI.
+				
+				The unit minute has been added automatically because it is a required unit for AimmsWebUI."
+			}
+		}
+	}
+}

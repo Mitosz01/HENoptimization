@@ -1,0 +1,29 @@
+﻿There is 100.121 Mb in use.
+              Welcome to BARON v. 21
+      Global Optimization by BRANCH-AND-REDUCE
+  BARON is a product of The Optimization Firm, LLC
+   Parts of the BARON software were created at the
+     University of Illinois at Urbana-Champaign.
+
+Warning: BARON: Time limit exceeded.
+Warning at line 1 in user-defined function section "MainExecution":
+BARON: Time limit exceeded.
+Warning: After 1132 iterations BARON 21 found an integer solution to minCost.
+The minimum found for TotalCost is 5970182.93128.
+Warning at line 1 in user-defined function section "MainExecution":
+After 1132 iterations BARON 21 found an integer solution to minCost.
+The minimum found for TotalCost is 5970182.93128.
+              Welcome to BARON v. 21
+      Global Optimization by BRANCH-AND-REDUCE
+  BARON is a product of The Optimization Firm, LLC
+   Parts of the BARON software were created at the
+     University of Illinois at Urbana-Champaign.
+
+Warning: BARON: Time limit exceeded.
+Warning at line 1 in user-defined function section "MainExecution":
+BARON: Time limit exceeded.
+Warning: After 14083 iterations BARON 21 found an integer solution to minCost.
+The minimum found for TotalCost is 5897348.34281.
+Warning at line 1 in user-defined function section "MainExecution":
+After 14083 iterations BARON 21 found an integer solution to minCost.
+The minimum found for TotalCost is 5897348.34281.

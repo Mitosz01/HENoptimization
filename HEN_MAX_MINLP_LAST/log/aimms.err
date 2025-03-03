@@ -1,0 +1,9 @@
+A DataChangeMonitor with ID DataChangeMonitor001 does not exist.
+Warning at line 1 in user-defined function section "MainExecution".
+BARON: Time limit exceeded.
+Warning at line 1 in user-defined function section "MainExecution".
+After 1132 iterations BARON 21 found an integer solution to minCost. The minimum found for TotalCost is 5970182.93128.
+Warning at line 1 in user-defined function section "MainExecution".
+BARON: Time limit exceeded.
+Warning at line 1 in user-defined function section "MainExecution".
+After 14083 iterations BARON 21 found an integer solution to minCost. The minimum found for TotalCost is 5897348.34281.
